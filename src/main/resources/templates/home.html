@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<title>Simple To Do</title>
+<style>
+table.type01 {
+    border-collapse: collapse;
+    text-align: left;
+    line-height: 1.0;
+    margin : 10px 10px;
+}
+table.type01 th {
+    padding: 3px;
+    font-weight: bold;
+    vertical-align: middle;
+    border: 1px solid #ccc;
+}
+table.type01 td {
+    padding: 3px;
+    vertical-align: middle;
+    border: 1px solid #ccc;
+}
+</style>
+</head>
+<body>
+	<h1>Simple TODOs</h1>
+	<table class="type01">
+		<thead>
+			<tr>
+				<th align="center" style="width: 40px">ID</th>
+				<th align="center" style="width: 200px">할일</th>
+				<th align="center" style="width: 150px">작성일시</th>
+				<th align="center" style="width: 150px">최종수정일시</th>
+				<th align="center" style="width: 40px">완료</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr th:each="todo: ${todos}">
+				<td align="center"><a
+					th:href="'javascript:edit(' +
+					${todo.id} + ')'"
+					th:text="${todo.id}">ID</a></td>
+				<td
+					th:text="${todo.name} + ${
+					#strings.arrayJoin( #strings.arrayPrepend(todo.refs, ' @'), '')
+				}">Name</td>
+				<td th:text="${todo.creDt}" align="center">CreDt</td>
+				<td th:text="${todo.modDt}" align="center">ModDt</td>
+				<td align="center"><input type="checkbox"
+					th:id="'check' + ${todo.id}" th:checked="${todo.complete}"
+					onClick="javascript:complete(this, "
+					th:attrappend="onClick=${todo.id} + ')'" /></td>
+			</tr>
+			<tr>
+				<td colspan="5" align="center"><span th:each="page : ${pages}">
+						<a th:unless="${page}==${currentPage}" th:text="${page}" href="#"
+						th:href="@{/(page=${page})}">view</a> <span
+						th:if="${page}==${currentPage}" th:text="${page}">view</span>
+				</span></td>
+			</tr>
+		</tbody>
+	</table>
+	<form id="editForm" action="#" method="POST">
+		<input type="hidden" name="id" /> <input type="hidden" name="page"
+			th:value="${currentPage}" /> <input type="hidden" name="limit"
+			th:value="${limit}" />
+		<table id="editTable" class="type01"
+			style="display: none">
+			<tbody>
+				<tr>
+					<td rowspan="2" align="center" style="width: 100px"><div
+							id="modId" style="font-size: 30px"></div></td>
+					<th align="right" style="width: 60px">할일</th>
+					<td style="width: 300px"><input type="text" name="name" /></td>
+				</tr>
+				<tr>
+					<th align="right">참조</th>
+					<td ><input type="text" name="refs" />,(comma)로 구분</td>
+				</tr>
+				<tr>
+					<td colspan="3" align="right"><input type="submit" value="저장" /></td>
+				</tr>
+			</tbody>
+		</table>
+	</form>
+	<div>
+		<input id="newBtn" type="button" value="새 할일"
+			onClick="javascript:toggleShow()" />
+	</div>
+	<form id="newForm" action="#" method="POST">
+		<input type="hidden" name="page" th:value="${currentPage}" /> <input
+			type="hidden" name="limit" th:value="${limit}" />
+		<table id="newTable" class="type01"
+			style="display: none">
+			<tbody>
+				<tr>
+					<th align="center" style="width: 60px">할일</th>
+					<td style="width: 300px"><input type="text" name="name" /></td>
+				</tr>
+				<tr>
+					<th align="center">참조</th>
+					<td><input type="text" name="refs" />,(comma)로 구분</td>
+				</tr>
+				<tr>
+					<td colspan="2" align="right"><input type="submit" value="저장" /></td>
+				</tr>
+			</tbody>
+		</table>
+	</form>
+</body>
+
+<script type="text/javascript">
+	var visible = false;
+	function toggleShow() {
+		visible = !visible;
+		if (visible) {
+			document.getElementById('newTable').style.display = 'table';
+			document.getElementById('editTable').style.display = 'none';
+		} else {
+			document.getElementById('newTable').style.display = 'none';
+		}
+	}
+
+	function edit(id) {
+		visible = false;
+		document.getElementById('newTable').style.display = 'none';
+		document.getElementById('editTable').style.display = 'table';
+		document.getElementById('editForm').id.value = id;
+		document.getElementById('modId').innerText = id;
+		makeRequestLoadUpdatingTodo(id);
+	}
+
+	var httpRequest;
+	
+	function makeRequestLoadUpdatingTodo(id) {
+		httpRequest = new XMLHttpRequest();
+
+		if (!httpRequest) {
+			alert('XMLHTTP 인스턴스를 만들 수가 없어요');
+			return false;
+		}
+		httpRequest.onreadystatechange = todoLoaded;
+		httpRequest.open('GET', 'api/1.0/todos/' + id);
+		httpRequest.send();
+	}
+
+	function todoLoaded() {
+		if (httpRequest.readyState === XMLHttpRequest.DONE) {
+			if (httpRequest.status === 200) {
+				var response = JSON.parse(httpRequest.responseText);
+				document.getElementById('editForm').name.value = response.name;
+				document.getElementById('editForm').refs.value = response.refs;
+			} else {
+				alert(httpRequest.status);
+			}
+		}
+	}
+	
+	function complete(checkbox, id) {
+		return makeRequestCompleteTodo(id, checkbox.checked)
+	}
+	
+	function makeRequestCompleteTodo(id, completed) {
+		httpRequest = new XMLHttpRequest();
+
+		if (!httpRequest) {
+			alert('XMLHTTP 인스턴스를 만들 수가 없어요');
+			return;
+		}
+		httpRequest.onreadystatechange = todoCompleted;
+		httpRequest.open('PATCH', 'api/1.0/todos/' + id + '?completed=' + completed);
+	    httpRequest.send();
+	}
+
+	function todoCompleted() {
+		if (httpRequest.readyState === XMLHttpRequest.DONE) {
+			if (httpRequest.status === 200) {
+				var response = JSON.parse(httpRequest.responseText);
+				if (response.msg != 'OK') {
+					alert(response.msg);
+				}
+			} else {
+				alert(httpRequest.status);
+			}
+			location.reload();
+		}
+	}	
+</script>
+</html>
+
+
+

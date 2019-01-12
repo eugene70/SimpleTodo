@@ -1,22 +1,21 @@
-package eugene.todo.api.vo;
+package eugene.todo.vo;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 public class TodoVo implements Serializable {
-	/**
-	 * 
-	 */
+
 	private static final long serialVersionUID = 1967346566312437928L;
 
 	String id;
-	List<String> refs;
-	List<String> subs;
+	List<String> refs = new ArrayList<String>();
+	List<String> subs = new ArrayList<String>();
 	String name;
 	String creDt;
 	String modDt;
 	boolean complete;
+	
 
 	public String getId() {
 		return id;
@@ -35,6 +34,9 @@ public class TodoVo implements Serializable {
 	}
 
 	public void addRef(String ref) {
+		if (ref == null || ref.length() == 0) {
+			return;
+		}
 		if (this.refs == null) {
 			this.refs = new ArrayList<String>();
 		}
@@ -57,6 +59,9 @@ public class TodoVo implements Serializable {
 	}
 
 	public void addSub(String sub) {
+		if (sub == null || sub.length() == 0) {
+			return;
+		}
 		if (this.subs == null) {
 			this.subs = new ArrayList<String>();
 		}
