@@ -2,9 +2,9 @@
 간단한 TODO 어플리케이션.
 이 프로젝트는 간단한 할일목록관리 웹어플리케이션이며, 과제수행을 위하여 작성하는 것입니다.
 
-### [과제요구사항](requirements.md)
+## [과제요구사항](requirements.md)
 
-### 문제해결전략
+## 문제해결전략
 * 개발언어: Java + SpringBoot
 * 데이터베이스: Redis
 
@@ -42,28 +42,30 @@
   - 하위 할일의 완료상태를 취소하는 경우 상위 할일의 완료상태도 취소하여야 한다
   - 완료 취소시 상위 할일이 있는 경우 에러 메시지 노출보다는 자동으로 같이 취소시키는 것이 좋을 것으로 판단(선택의 문제)
   
+## 설치 및 실행
 
 ### Redis 준비
 
 * 설치
 ~~~
-$ wget http://download.redis.io/releases/redis-5.0.3.tar.gz
-$ tar xzf redis-5.0.3.tar.gz
-$ cd redis-5.0.3
-$ make
+wget http://download.redis.io/releases/redis-5.0.3.tar.gz
+tar xzf redis-5.0.3.tar.gz
+cd redis-5.0.3
+make
 ~~~
 
 * 실행
 ~~~
 src/redis-server
 ~~~
-
+  - 기본 6379 포트로 실행
+  
 ### 빌드
 
 ~~~
-  git clone https://github.com/eugene70/SimpleTodo.git
-  cd SimpleTodo
-  ./gradlew
+git clone https://github.com/eugene70/SimpleTodo.git
+cd SimpleTodo
+./gradlew
 ~~~
 
 ### 테스트
@@ -78,7 +80,7 @@ src/redis-server
 ./gradlew bootRun
 ~~~
 
-* 브라우저에서 http://localhost:8080/
+* 브라우저에서, http://localhost:8080/
   
   
   
