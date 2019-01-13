@@ -30,11 +30,19 @@ public class TodoDao {
 	
 	private final SimpleDateFormat dtFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-	private final String keyLastId = "eugene:todos:lastId";
-	private final String key = "eugene:todos";
-	private final String keyPrefix = key + ":";
-	private final String keyPrefixRefs = keyPrefix + "refs:";
-	private final String keyPrefixSubs = keyPrefix + "subs:";
+	private String key = "eugene:todos";
+	private String keyLastId = key + ":lastId";
+	private String keyPrefix = key + ":";
+	private String keyPrefixRefs = keyPrefix + "refs:";
+	private String keyPrefixSubs = keyPrefix + "subs:";
+	
+	public void setKey(String newKey) {
+		key = newKey;
+		keyLastId = key + ":lastId";
+		keyPrefix = key + ":";
+		keyPrefixRefs = keyPrefix + "refs:";
+		keyPrefixSubs = keyPrefix + "subs:";
+	}
 	
 	/**
 	 * 새로운 할일 ID를 생성한다.
@@ -60,6 +68,10 @@ public class TodoDao {
 		valueOperations.set(keyLastId, "0");
 	}
 
+	public void removeIdKey() {
+		valueOperations.getOperations().delete(keyLastId);
+	}
+	
 	/**
 	 * 새로운 todo를 등록한다.
 	 * @param vo 등록할 할일 레코드
@@ -216,7 +228,7 @@ public class TodoDao {
 	private void makeReference(String id, List<String> refs) {
 		refs.stream()
 	    	.filter(ref->!id.equals(ref)) // 자기 자신은 참조 할일에서 제거
-		    .filter(ref->exists(ref)) // 존재하지 않는 참조 할일은 제거
+		    .filter(ref->isSafe(id, ref)) // 참조 적합성 체크
 		    .forEach(ref->{
 				// sorted set에 키값을 보관(참조 목록 관리)
 				zSetOperations.add(keyPrefixRefs + id, ref, Long.valueOf(ref));
@@ -225,6 +237,18 @@ public class TodoDao {
 		    });
 	}
 
+	/**
+	 * 참조 적합성 체크
+	 * 존재여부 및 상호 참조 방지
+	 * @param ref
+	 * @return
+	 */
+	public boolean isSafe(String id, String ref) {
+		return exists(ref) &&
+				// 상호참조 방지를 위한 체크 
+				!zSetOperations.range(keyPrefixRefs+ref, 0, -1).contains(id);
+	}
+	
 	/**
 	 * id에 해당하는 할일이 존재하는지 검사한다.
 	 * @param id 할일 ID

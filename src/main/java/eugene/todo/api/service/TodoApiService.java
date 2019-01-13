@@ -8,6 +8,8 @@ import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.ZSetOperations;
@@ -17,6 +19,8 @@ import eugene.todo.vo.TodoVo;
 
 @Service
 public class TodoApiService {
+	
+	private final Logger logger = LoggerFactory.getLogger(this.getClass());
 	
 	@Resource(name="redisTemplate")
 	private HashOperations<String, String, String> hashOperations;
@@ -33,21 +37,47 @@ public class TodoApiService {
 	public void init() {
 
 		// 모든 레코드를 삭제
+		//getTodoList(0, 0).forEach(todo->remove(todo.getId()));
+		
+		// lastId를 "0"로 세팅
+		//resetId();
+		if (count() == 0) {
+			saveTodo("집안일", "");
+			saveTodo("빨래", "1");
+			saveTodo("청소", "2");
+			saveTodo("방청소", "3");
+		}
+	}
+	
+	/**
+	 * 테스트 등의 목적으로 데이터 저장소의 키를 변경한다.
+	 * @param newKey
+	 */
+	public void setKey(String newKey) {
+		dao.setKey(newKey);
+	}
+	
+	public void destroyAll() {
+		// 모든 레코드를 삭제
 		getTodoList(0, 0).forEach(todo->remove(todo.getId()));
 		
 		// lastId를 "0"로 세팅
-		resetId();
-		
-		saveTodo("집안일", "");
-		saveTodo("빨래", "1");
-		saveTodo("청소", "2");
-		saveTodo("방청소", "3");
+		dao.removeIdKey();
 	}
 	
+	/**
+	 * ID 시퀀스를 0으로 초기화 한다.
+	 */
 	public void resetId() {
 		dao.resetId();
 	}
 	
+	/**
+	 * 할일명과 참조열로 새로운 할일 등록
+	 * @param name 할일명 
+	 * @param refs 참조열 
+	 * @return 생성된 할일 
+	 */
 	public TodoVo saveTodo(String name, String refs) {
 		TodoVo todo = new TodoVo();
 		todo.setName(name);
@@ -64,6 +94,9 @@ public class TodoApiService {
 	 * @return
 	 */
 	public TodoVo saveTodo(TodoVo vo) {
+		
+		logger.info("saveTodo {}", vo);
+		System.out.println("saveTodo");
 		if (vo.getId() == null) {
 			// id 값이 없으면 새로운 todo로 등록한다.
 			return dao.insert(vo);
@@ -134,7 +167,7 @@ public class TodoApiService {
 	 * 할일의 전체 갯수를 구한다.
 	 * @return
 	 */
-	public Long count() {
+	public long count() {
 		return dao.count();
 	}
 
