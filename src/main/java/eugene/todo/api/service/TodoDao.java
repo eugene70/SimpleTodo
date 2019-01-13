@@ -37,8 +37,9 @@ public class TodoDao {
 	private final String keyPrefixSubs = keyPrefix + "subs:";
 	
 	/**
-	 * 새로운 Todo ID를 생성한다.
-	 * @return todo id
+	 * 새로운 할일 ID를 생성한다.
+	 * 동시성 문제 발생 가능성으로 동기화하였다.
+	 * @return 생성된 할일 ID
 	 */
 	public synchronized String generateId() {
 		String lastId = valueOperations.get(keyLastId);
@@ -47,16 +48,22 @@ public class TodoDao {
 			return "1";
 		}
 		//valueOperations.increment(keyLastId);
-		//Serialization 때문에 숫자로 인식하지 않음
+		//Serialization 때문에 값 앞에 특수 문자열이 붙어있어
+		//Redis에서 숫자로 인식하지 않아 Redis의 INCR 명령을 사용할 수 없음
+		
 		lastId = String.valueOf(Long.valueOf(lastId) + 1);
 		valueOperations.set(keyLastId, lastId);
 		return lastId;
 	}
 	
+	public void resetId() {
+		valueOperations.set(keyLastId, "0");
+	}
+
 	/**
 	 * 새로운 todo를 등록한다.
-	 * @param vo
-	 * @return
+	 * @param vo 등록할 할일 레코드
+	 * @return 등록된 할일 레코드 
 	 */
 	public TodoVo insert(TodoVo vo) {
 		if (vo.getId() == null) {
@@ -83,8 +90,8 @@ public class TodoDao {
 	
 	/**
 	 * id로 할일 하나를 조회한다.
-	 * @param id
-	 * @return
+	 * @param id 할일 ID
+	 * @return 할일 레코드 
 	 */
 	public TodoVo select(String id) {
 		TodoVo vo = null;
@@ -116,7 +123,7 @@ public class TodoDao {
 	 * 범위를 지정하여 할일 목록을 조회한다.
 	 * @param offset 시작점 
 	 * @param limit 조회건수 
-	 * @return
+	 * @return 할일 목록(리스트)
 	 */
 	public List<TodoVo> select(long offset, long limit) {
 		Set<String> todoIdSet = zSetOperations.range(key, offset, limit==0 ? -1 : offset + limit - 1);
@@ -131,8 +138,8 @@ public class TodoDao {
 	
 	/**
 	 * 할일을 수정한다.
-	 * @param vo
-	 * @return
+	 * @param vo 수정할 할일 레코드
+	 * @return 수정된 할일 레코드
 	 */
 	public TodoVo update(TodoVo vo) {
 		// 상위 할일에서 하위 할일(현재 할일)로의 연결을 지운다.
@@ -157,7 +164,7 @@ public class TodoDao {
 	
 	/**
 	 * id로 할일을 삭제한다.
-	 * @param id
+	 * @param id 할일 ID 
 	 */
 	public void delete(String id) {
 		// sorted set에 키값을 삭제(todo목록에서 삭제)
@@ -178,10 +185,20 @@ public class TodoDao {
  		valueOperations.getOperations().delete(keyPrefixSubs+id);
 	}
 
+	/**
+	 * 전체 할일 갯수를 구한다.
+	 * @return 할일 갯수 
+	 */
 	public long count() {
 		return zSetOperations.count(key, Double.MIN_VALUE, Double.MAX_VALUE);
 	}
 
+	/**
+	 * 할일 하나를 완료 또는 완료해제 시킨다.
+	 * 완료해제의 경우에는 참조관계의 상위 할일도 해제 시킨다.
+	 * @param id 할일 ID 
+	 * @param complete 완료 여부, true:완료, false:미완료
+	 */
 	public void complete(String id, boolean complete) {
 		if (!complete) {
 			// 완료 해제의 경우 참조 할일도 해제를 하여야 한다.
@@ -191,14 +208,15 @@ public class TodoDao {
 	}
 
 	/**
-	 * 참조목록을 갱신한다.
-	 * @param id
-	 * @param refs
+	 * 할일의 참조목록을 갱신한다.
+	 * 참조 당하는 할일에 대해서도 딸린 할일목록을 관리한다.
+	 * @param id 할일 ID
+	 * @param refs 참조목록
 	 */
 	private void makeReference(String id, List<String> refs) {
 		refs.stream()
 	    	.filter(ref->!id.equals(ref)) // 자기 자신은 참조 할일에서 제거
-		    .filter(ref->existsTodo(ref)) // 존재하지 않는 참조 할일은 제거
+		    .filter(ref->exists(ref)) // 존재하지 않는 참조 할일은 제거
 		    .forEach(ref->{
 				// sorted set에 키값을 보관(참조 목록 관리)
 				zSetOperations.add(keyPrefixRefs + id, ref, Long.valueOf(ref));
@@ -207,7 +225,12 @@ public class TodoDao {
 		    });
 	}
 
-	public boolean existsTodo(String id) {
+	/**
+	 * id에 해당하는 할일이 존재하는지 검사한다.
+	 * @param id 할일 ID
+	 * @return id가 존재하면 참, 아니면 거짓
+	 */
+	public boolean exists(String id) {
 		return hashOperations.hasKey(keyPrefix+id, "id");
 	}
 	

@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.validation.Valid;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,7 +46,7 @@ public class TodoApiController {
 	 */
 	@RequestMapping(method = RequestMethod.POST, value = "/api/1.0/todos/")
 	public ResponseEntity<TodoVo> 
-			postTodo(@RequestBody TodoVo vo) {
+			postTodo(@Valid @RequestBody TodoVo vo) {
 		logger.info("API postTodo {}", vo);
 		TodoVo resultVo = service.saveTodo(vo);
 		if (resultVo == null) {

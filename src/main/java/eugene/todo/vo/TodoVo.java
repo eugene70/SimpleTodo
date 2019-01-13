@@ -4,6 +4,8 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.validation.constraints.NotEmpty;
+
 public class TodoVo implements Serializable {
 
 	private static final long serialVersionUID = 1967346566312437928L;
@@ -11,6 +13,8 @@ public class TodoVo implements Serializable {
 	String id;
 	List<String> refs = new ArrayList<String>();
 	List<String> subs = new ArrayList<String>();
+	
+	@NotEmpty
 	String name;
 	String creDt;
 	String modDt;

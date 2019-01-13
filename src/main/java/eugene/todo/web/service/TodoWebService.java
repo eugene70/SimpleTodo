@@ -26,6 +26,10 @@ public class TodoWebService {
 		return restTemplate.getForObject("http://localhost:8080/api/1.0/todos/count", Long.class);
 	}
 
+	public TodoVo post(TodoVo vo) {
+        return restTemplate.postForObject("http://localhost:8080/api/1.0/todos/", vo, TodoVo.class);
+	}
+
 	public TodoVo post(String id, String name, String refs) {
 		TodoVo vo = new TodoVo();
 		vo.setId(id);

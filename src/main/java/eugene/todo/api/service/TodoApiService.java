@@ -1,14 +1,13 @@
 package eugene.todo.api.service;
 
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.ZSetOperations;
@@ -32,45 +31,30 @@ public class TodoApiService {
 
 	@PostConstruct
 	public void init() {
+
+		// 모든 레코드를 삭제
+		getTodoList(0, 0).forEach(todo->remove(todo.getId()));
 		
-		// sorted set에 키값을 보관(todo 목록 관리)
-		zSetOperations.add("eugene:todos", "1", 1);
-		zSetOperations.add("eugene:todos", "2", 2);
-		zSetOperations.add("eugene:todos", "3", 3);
-		zSetOperations.add("eugene:todos", "4", 4);
+		// lastId를 "0"로 세팅
+		resetId();
 		
-		// sorted set에 키값을 보관(참조 목록 관리)
-		zSetOperations.add("eugene:todos:refs:2", "1", 1);
-		zSetOperations.add("eugene:todos:refs:3", "1", 1);
-		zSetOperations.add("eugene:todos:refs:4", "1", 1);
-		zSetOperations.add("eugene:todos:refs:4", "3", 3);
-		
-		// sorted set에 키값을 보관(피참조 목록 관리)
-		zSetOperations.add("eugene:todos:subs:1", "2", 2);
-		zSetOperations.add("eugene:todos:subs:1", "3", 3);
-		zSetOperations.add("eugene:todos:subs:1", "4", 4);
-		zSetOperations.add("eugene:todos:subs:3", "4", 4);
-		
-		hashOperations.put("eugene:todos:"+1, "id", "1");
-		hashOperations.put("eugene:todos:"+1, "name", "집안일");
-		hashOperations.put("eugene:todos:"+1, "creDt", "2018-04-01 10:00:00");
-		hashOperations.put("eugene:todos:"+1, "modDt", "2018-04-01 13:00:00");
-		hashOperations.put("eugene:todos:"+1, "complete", "false");
-		hashOperations.put("eugene:todos:"+2, "id", "2");
-		hashOperations.put("eugene:todos:"+2, "name", "빨래");
-		hashOperations.put("eugene:todos:"+2, "creDt", "2018-04-01 11:00:00");
-		hashOperations.put("eugene:todos:"+2, "modDt", "2018-04-01 11:00:00");
-		hashOperations.put("eugene:todos:"+2, "complete", "false");
-		hashOperations.put("eugene:todos:"+3, "id", "3");
-		hashOperations.put("eugene:todos:"+3, "name", "청소");
-		hashOperations.put("eugene:todos:"+3, "creDt", "2018-04-01 12:00:00");
-		hashOperations.put("eugene:todos:"+3, "modDt", "2018-04-01 13:00:00");
-		hashOperations.put("eugene:todos:"+3, "complete", "false");
-		hashOperations.put("eugene:todos:"+4, "id", "4");
-		hashOperations.put("eugene:todos:"+4, "name", "방청소");
-		hashOperations.put("eugene:todos:"+4, "creDt", "2018-04-01 12:00:00");
-		hashOperations.put("eugene:todos:"+4, "modDt", "2018-04-01 13:00:00");
-		hashOperations.put("eugene:todos:"+4, "complete", "false");
+		saveTodo("집안일", "");
+		saveTodo("빨래", "1");
+		saveTodo("청소", "2");
+		saveTodo("방청소", "3");
+	}
+	
+	public void resetId() {
+		dao.resetId();
+	}
+	
+	public TodoVo saveTodo(String name, String refs) {
+		TodoVo todo = new TodoVo();
+		todo.setName(name);
+		Arrays.asList(refs.split(",")).stream()
+		  .map(ref -> ref.trim()) // 공백제거 
+		  .forEach(ref -> {todo.addRef(ref);});
+		return saveTodo(todo);
 	}
 	
 	/**
@@ -130,7 +114,7 @@ public class TodoApiService {
 	public String completeTodo(TodoVo vo) {
 		if (vo.isComplete() && vo.getSubs() != null && 
 			vo.getSubs().stream().filter(a->!getTodo(a).isComplete()).count() > 0) {
-			return "딸린 할일이 모두 완료되지 않았으므로 이 일도 완료할 수 없습니다. 미완료 딸린 할일: " + 
+			return "연관된 할일이 모두 완료되지 않았으므로 이 일도 완료할 수 없습니다. \n완료되지 않은 딸린 할일: " + 
 					vo.getSubs().stream().filter(a->!getTodo(a).isComplete()).collect(Collectors.joining(", "));
 		}
 		dao.complete(vo.getId(), vo.isComplete());
@@ -143,7 +127,7 @@ public class TodoApiService {
 	 * @return
 	 */
 	public boolean existsTodo(String id) {
-		return dao.existsTodo(id);
+		return dao.exists(id);
 	}
 
 	/**
