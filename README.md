@@ -54,11 +54,10 @@ cd redis-5.0.3
 make
 ~~~
 
-* 실행
+* 실행(기본 6379 포트로 실행)
 ~~~
 src/redis-server
 ~~~
-  - 기본 6379 포트로 실행
   
 ### 빌드
 
@@ -74,7 +73,7 @@ cd SimpleTodo
 ./gradlew test
 ~~~
 
-### 실행
+### 실행(기본 8080 포트로 실행)
 
 ~~~
 ./gradlew bootRun
